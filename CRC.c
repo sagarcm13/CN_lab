@@ -1,57 +1,89 @@
 #include <stdio.h>
-#include <string.h>
-#define N strlen(gen)
-char modif[28], checksum[28], gen[28];
-int a, e, c, b;
-void xor () {
-    for (c = 1; c < N; c++)
-        checksum[c] = ((checksum[c] == gen[c]) ? '0' : '1');
-} void crc()
-{
-    for (e = 0; e < N; e++)
-        checksum[e] = modif[e];
-    do
-    {
-        if (checksum[0] == '1')
-            xor();
-        for (c = 0; c < N - 1; c++)
-            checksum[c] = checksum[c + 1];
-        checksum[c] = modif[e++];
-    } while (e <= a + N - 1);
-}
+char m[50], g[50], r[50], q[50], temp[50];
+void caltrans(int);
+void crc(int);
+void calram();
+void shiftl();
 int main()
 {
-    int flag = 0;
-    strcpy(gen, "10001000000100001");
-    printf("\nEnter data:");
-    scanf("%s", modif);
-    printf("\nGenerating polynomial:%s\n", gen);
-    a = strlen(modif);
-    for (e = a; e < a + N - 1; e++)
-        modif[e] = '0';
-    printf("Modified data is:%s\n", modif);
-    crc();
-    printf("Checksum is:%s\n", checksum);
-    for (e = a; e < a + N - 1; e++)
-        modif[e] = checksum[e - a];
-    printf("\nFinal codeword is : %s\n", modif);
-    printf("\nTest error detection 0(yes) 1(no)?:");
-    scanf("%d", &e);
-    if (e == 0)
-    {
-        do
-        {
-            printf("\nEnter the position where error is to be inserted:");
-            scanf("%d", &e);
-        } while (e == 0 || e > a + N - 1);
-        modif[e - 1] = (modif[e - 1] == '0') ? '1' : '0';
-        printf("\nError data:%s\n", modif);
-    }
-    crc();
-    for (e = 0; (e < N - 1) && (checksum[e] != '1'); e++)
-        ;
-    if (e < N - 1)
-        printf("Error detected\n\n");
+    int n, i = 0;
+    char ch, flag = 0;
+    printf("Enter the frame bits:");
+    while ((ch = getc(stdin)) != '\n')
+        m[i++] = ch;
+    n = i;
+    for (i = 0; i < 16; i++)
+        m[n++] = '0';
+    m[n] = '\0';
+    printf("Message after appending 16 zeros:%s", m);
+    for (i = 0; i <= 16; i++)
+        g[i] = '0';
+    g[0] = g[4] = g[11] = g[16] = '1';
+    g[17] = '\0';
+    printf("\ngenerator:%s\n", g);
+    crc(n);
+    printf("\n\nquotient:%s", q);
+    caltrans(n);
+    printf("\ntransmitted frame:%s", m);
+    printf("\nEnter transmitted freme:");
+    scanf("\n%s", m);
+    printf("CRC checking\n");
+    crc(n);
+    printf("\n\nlast remainder:%s", r);
+    for (i = 0; i < 16; i++)
+        if (r[i] != '0')
+            flag = 1;
+        else
+            continue;
+    if (flag == 1)
+        printf("Error during transmission");
     else
-        printf("\nNo error detected \n\n");
+        printf("\n\nReceived freme is correct");
+}
+void crc(int n)
+{
+    int i, j;
+    for (i = 0; i < n; i++)
+        temp[i] = m[i];
+    for (i = 0; i < 16; i++)
+        r[i] = m[i];
+    printf("\nintermediate remainder\n");
+    for (i = 0; i < n - 16; i++)
+    {
+        if (r[0] == '1')
+        {
+            q[i] = '1';
+            calram();
+        }
+        else
+        {
+            q[i] = '0';
+            shiftl();
+        }
+        r[16] = m[17 + i];
+        r[17] = '\0';
+        printf("\nremainder %d:%s", i + 1, r);
+        for (j = 0; j <= 17; j++)
+            temp[j] = r[j];
+    }
+    q[n - 16] = '\0';
+}
+void calram()
+{
+    int i, j;
+    for (i = 1; i <= 16; i++)
+        r[i - 1] = ((int)temp[i] - 48) ^ ((int)g[i] - 48) + 48;
+}
+void shiftl()
+{
+    int i;
+    for (i = 1; i <= 16; i++)
+        r[i - 1] = r[i];
+}
+void caltrans(int n)
+{
+    int i, k = 0;
+    for (i = n - 16; i < n; i++)
+        m[i] = ((int)m[i] - 48) ^ ((int)r[k++] - 48) + 48;
+    m[i] = '\0';
 }
